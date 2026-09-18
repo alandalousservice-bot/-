@@ -210,9 +210,67 @@ data class AuditLog(
     val createdAt: String
 )
 
+data class WorkDaySchedule(
+    val dayName: String,
+    val morningShift: String = "07:30 - 12:00",
+    val afternoonShift: String = "13:00 - 16:30",
+    val specificTasks: String = "تنظيف ومتابعة المرافق"
+)
+
+data class SupportStaff(
+    val id: Int,
+    val fullName: String,
+    val jobTitle: String,
+    val rank: String = "عامل مهني صنف 01",
+    val phone: String = "0661234567",
+    val assignedArea: String = "المدخل الرئيسي والساحة",
+    val shiftType: String = "دوام كامل (40 ساعة/أسبوع)",
+    val isPresentToday: Boolean = true,
+    val notes: String? = null,
+    val weeklySchedule: List<WorkDaySchedule> = emptyList()
+)
+
 sealed class MealScanResult(val message: String, val studentName: String?) {
     data class Success(val name: String) : MealScanResult("تم تأكيد تقديم الوجبة بنجاح", name)
     data class AlreadyTaken(val name: String) : MealScanResult("أُخذت الوجبة مسبقاً لهذه الفترة", name)
     data class AbsentWarning(val name: String) : MealScanResult("تنبيه: التلميذ مسجل غائباً في الحصة الصباحية", name)
     object NotFound : MealScanResult("رمز البطاقة غير مسجل في قاعدة التلاميذ", null)
 }
+
+enum class LanNetworkType(val titleAr: String, val iconEmoji: String) {
+    WIFI_ROUTER("مودام واي فاي (Wi-Fi Modem)", "📶"),
+    PHONE_HOTSPOT("نقطة اتصال هاتف وسيط (Hotspot)", "📱"),
+    ETHERNET_LAN("شبكة سلكية محلية (Ethernet)", "🌐"),
+    OFFLINE("غير متصل بشبكة محلية", "⚠️")
+}
+
+enum class DeviceSyncRole(val titleAr: String, val descriptionAr: String) {
+    HOST("مضيف رئيسي (هاتف المدير / خادم الإدارة)", "يستقبل البيانات من هواتف الأساتذة والمطعم ويعتمد النسخة المركزية"),
+    CLIENT("جهاز طرفي (هاتف الأستاذ / مشرف المطعم)", "يرسل الغيابات والوجبات إلى جهاز المدير عبر المودام أو الهاتف الوسيط")
+}
+
+enum class DiagnosticStepState {
+    IDLE, RUNNING, SUCCESS, WARNING, ERROR
+}
+
+data class DiagnosticStep(
+    val id: String,
+    val titleAr: String,
+    val descriptionAr: String,
+    val state: DiagnosticStepState = DiagnosticStepState.IDLE,
+    val resultMessage: String = "",
+    val detailValue: String = ""
+)
+
+data class SyncLogEntry(
+    val id: Long,
+    val timestamp: String,
+    val sourceAccount: String,
+    val roleTitle: String,
+    val endpoint: String,
+    val success: Boolean,
+    val latencyMs: Long,
+    val recordsCount: Int,
+    val message: String
+)
+
