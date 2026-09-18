@@ -1,0 +1,6 @@
+{
+  "name": "School Platform",
+  "description": "منصة مدرسة مزيان عمار الابتدائية لإدارة الحضور والنقاط والمطعم والميزانية",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

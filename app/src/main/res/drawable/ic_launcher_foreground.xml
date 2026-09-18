@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- School & Book Icon centered in 66dp zone (from 21 to 87) -->
+    <path
+        android:fillColor="#E6B85C"
+        android:pathData="M54,28 L26,42 L54,56 L82,42 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,48 L34,66 C34,74 54,80 54,80 C54,80 74,74 74,66 L74,48 L54,58 Z" />
+    <path
+        android:fillColor="#F0C66D"
+        android:pathData="M80,44 L80,64 L76,64 L76,46 Z" />
+</vector>
