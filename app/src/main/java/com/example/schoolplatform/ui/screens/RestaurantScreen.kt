@@ -23,13 +23,15 @@ import com.example.schoolplatform.data.model.*
 import com.example.schoolplatform.data.repository.SchoolRepository
 import com.example.schoolplatform.ui.animation.bounceClick
 import com.example.schoolplatform.ui.components.SchoolTopBar
+import com.example.schoolplatform.ui.components.StudentAvatar
 import com.example.schoolplatform.ui.theme.*
 
 @Composable
 fun RestaurantScreen(
     onNavigateLanding: () -> Unit,
     onNavigateLogin: () -> Unit,
-    onNavigateNetworkSync: () -> Unit = {}
+    onNavigateNetworkSync: () -> Unit = {},
+    onNavigateTvKiosk: () -> Unit = {}
 ) {
     val currentUser by SchoolRepository.currentUser.collectAsState()
     val dailyMeal by SchoolRepository.dailyMeal.collectAsState()
@@ -49,7 +51,8 @@ fun RestaurantScreen(
                 currentUser = currentUser,
                 onNavigateLanding = onNavigateLanding,
                 onNavigateLogin = onNavigateLogin,
-                onNavigateNetworkSync = onNavigateNetworkSync
+                onNavigateNetworkSync = onNavigateNetworkSync,
+                onNavigateTvKiosk = onNavigateTvKiosk
             )
         }
     ) { innerPadding ->
@@ -196,7 +199,18 @@ fun RestaurantScreen(
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                                     border = BorderStroke(1.dp, BorderLight)
                                 ) {
-                                    Text("${student.fullName} (${student.barcode})", fontSize = 10.sp, color = TextPrimary)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        StudentAvatar(
+                                            fullName = student.fullName,
+                                            studentId = student.id,
+                                            size = 20.dp,
+                                            showBorder = false
+                                        )
+                                        Text("${student.fullName} (${student.barcode})", fontSize = 10.sp, color = TextPrimary)
+                                    }
                                 }
                             }
                         }

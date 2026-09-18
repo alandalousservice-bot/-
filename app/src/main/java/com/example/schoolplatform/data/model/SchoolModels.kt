@@ -274,3 +274,32 @@ data class SyncLogEntry(
     val message: String
 )
 
+enum class TvSlideCategory(val titleAr: String, val iconEmoji: String) {
+    WELCOME("الاستقبال وهوية المدرسة", "🏫"),
+    DAILY_SCHEDULE("الجدول والحصص الحالية", "🕒"),
+    CANTEEN_MENU("قائمة الوجبة المدرسية", "🍲"),
+    STUDENTS_HONOR("لوحة شرف التلاميذ المتفوقين", "🏆"),
+    IMPORTANT_ANNOUNCEMENT("إعلانات وإرشادات الإدارة", "📢"),
+    SUPPORT_STAFF_TODAY("طاقم المداومة والخدمات اليوم", "👷")
+}
+
+data class SchoolAnnouncement(
+    val id: Int,
+    val title: String,
+    val content: String,
+    val targetAudience: String, // الأولياء، التلاميذ، الطاقم التربوي، الجميع
+    val priority: String = "NORMAL", // NORMAL, HIGH, URGENT
+    val date: String,
+    val active: Boolean = true
+)
+
+data class TvDisplayConfig(
+    val schoolName: String = "مدرسة مزيان عمار الابتدائية",
+    val provinceMinistry: String = "ولاية سطيف · وزارة التربية الوطنية",
+    val autoScrollSeconds: Int = 12,
+    val isPlaying: Boolean = true,
+    val tickerText: String = "أهلاً وسهلاً بكم في مدرسة مزيان عمار الابتدائية · نرجو من الأولياء الكرام الالتزام بمواعيد الدخول والخروج الرسمية · وجبة اليوم ساخنة ومتوازنة في مطعم المدرسة · التميز والأخلاق شعارنا الدائم",
+    val showClock: Boolean = true,
+    val soundChimeOnSlide: Boolean = false
+)
+

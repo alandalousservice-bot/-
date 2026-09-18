@@ -74,7 +74,8 @@ fun SchoolPlatformApp() {
                         Role.TEACHER -> navController.navigate("teacher")
                         Role.RESTAURANT_MANAGER -> navController.navigate("restaurant")
                     }
-                }
+                },
+                onNavigateTvKiosk = { navController.navigate("tv_dashboard") }
             )
         }
 
@@ -109,6 +110,9 @@ fun SchoolPlatformApp() {
                 },
                 onNavigateNetworkSync = {
                     navController.navigate("network_sync")
+                },
+                onNavigateTvKiosk = {
+                    navController.navigate("tv_dashboard")
                 }
             )
         }
@@ -125,6 +129,9 @@ fun SchoolPlatformApp() {
                 },
                 onNavigateNetworkSync = {
                     navController.navigate("network_sync")
+                },
+                onNavigateTvKiosk = {
+                    navController.navigate("tv_dashboard")
                 }
             )
         }
@@ -141,12 +148,23 @@ fun SchoolPlatformApp() {
                 },
                 onNavigateNetworkSync = {
                     navController.navigate("network_sync")
+                },
+                onNavigateTvKiosk = {
+                    navController.navigate("tv_dashboard")
                 }
             )
         }
 
         composable("network_sync") {
             LocalNetworkSyncScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable("tv_dashboard") {
+            SmartTvKioskScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 }

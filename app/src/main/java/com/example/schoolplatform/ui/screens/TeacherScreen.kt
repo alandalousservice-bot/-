@@ -24,6 +24,7 @@ import com.example.schoolplatform.data.repository.SchoolRepository
 import com.example.schoolplatform.ui.animation.AnimatedSchoolTabRow
 import com.example.schoolplatform.ui.animation.bounceClick
 import com.example.schoolplatform.ui.components.SchoolTopBar
+import com.example.schoolplatform.ui.components.StudentAvatar
 import com.example.schoolplatform.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,7 +32,8 @@ import com.example.schoolplatform.ui.theme.*
 fun TeacherScreen(
     onNavigateLanding: () -> Unit,
     onNavigateLogin: () -> Unit,
-    onNavigateNetworkSync: () -> Unit = {}
+    onNavigateNetworkSync: () -> Unit = {},
+    onNavigateTvKiosk: () -> Unit = {}
 ) {
     val currentUser by SchoolRepository.currentUser.collectAsState()
     val classrooms by SchoolRepository.classrooms.collectAsState()
@@ -62,7 +64,12 @@ fun TeacherScreen(
 
     val classStudents = students.filter { it.classroomId == selectedClassId }
     val filteredStudents = classStudents.filter {
-        it.fullName.contains(searchQuery, ignoreCase = true) || it.barcode.contains(searchQuery)
+        val q = searchQuery.trim()
+        q.isEmpty() ||
+        it.fullName.contains(q, ignoreCase = true) ||
+        it.barcode.contains(q, ignoreCase = true) ||
+        it.id.toString() == q ||
+        it.id.toString().contains(q)
     }
 
     Scaffold(
@@ -73,7 +80,8 @@ fun TeacherScreen(
                 currentUser = currentUser,
                 onNavigateLanding = onNavigateLanding,
                 onNavigateLogin = onNavigateLogin,
-                onNavigateNetworkSync = onNavigateNetworkSync
+                onNavigateNetworkSync = onNavigateNetworkSync,
+                onNavigateTvKiosk = onNavigateTvKiosk
             )
         },
         snackbarHost = {
@@ -375,12 +383,48 @@ private fun AttendanceTab(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
-                placeholder = { Text("بحث عن تلميذ بالاسم أو رقم الباركود...", fontSize = 12.sp) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextMuted) },
+                placeholder = { Text("بحث عن تلميذ بالاسم أو رقم التعريف أو الباركود...", fontSize = 12.sp) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "بحث", tint = SchoolGreen) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onSearchQueryChange("") }) {
+                            Icon(Icons.Default.Close, contentDescription = "مسح البحث", tint = TextMuted, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = SchoolGreen,
+                    unfocusedBorderColor = BorderLight
+                )
             )
+        }
+
+        if (students.isEmpty()) {
+            item {
+                Surface(
+                    color = CardSurface,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, BorderLight),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("🔍", fontSize = 24.sp)
+                        Text("لا يوجد تلاميذ يطابقون البحث", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        if (searchQuery.isNotEmpty()) {
+                            TextButton(onClick = { onSearchQueryChange("") }) {
+                                Text("مسح البحث", color = SchoolGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Students Attendance List
@@ -403,20 +447,11 @@ private fun AttendanceTab(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Surface(
-                            color = if (isAbsent) DangerBg else SuccessBg,
-                            shape = CircleShape,
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    if (isAbsent) "✕" else "✓",
-                                    color = if (isAbsent) DangerRed else SuccessGreen,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
-                                )
-                            }
-                        }
+                        StudentAvatar(
+                            fullName = student.fullName,
+                            studentId = student.id,
+                            size = 38.dp
+                        )
                         Column {
                             Text(student.fullName, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             Text("باركود: ${student.barcode}", fontSize = 10.sp, color = TextMuted)
@@ -428,13 +463,24 @@ private fun AttendanceTab(
                         color = if (isAbsent) DangerRed else SuccessGreen,
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(
-                            text = if (isAbsent) "غائب" else "حاضر",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                if (isAbsent) "✕" else "✓",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                            Text(
+                                text = if (isAbsent) "غائب" else "حاضر",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -473,6 +519,18 @@ private fun GradebookTab(
 ) {
     var selectedTerm by remember { mutableStateOf("الفصل الثالث") }
     var selectedSubject by remember { mutableStateOf("التربية البدنية والرياضية") }
+    var gradeSearchQuery by remember { mutableStateOf("") }
+
+    val filteredStudents = remember(students, gradeSearchQuery) {
+        val q = gradeSearchQuery.trim()
+        if (q.isEmpty()) students
+        else students.filter {
+            it.fullName.contains(q, ignoreCase = true) ||
+            it.barcode.contains(q, ignoreCase = true) ||
+            it.id.toString() == q ||
+            it.id.toString().contains(q)
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -509,7 +567,56 @@ private fun GradebookTab(
             }
         }
 
-        items(students, key = { it.id }) { student ->
+        // Gradebook Student Search Bar
+        item {
+            OutlinedTextField(
+                value = gradeSearchQuery,
+                onValueChange = { gradeSearchQuery = it },
+                placeholder = { Text("بحث عن تلميذ في دفتر النقاط بالاسم أو رقم التعريف...", fontSize = 12.sp) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "بحث", tint = SchoolGreen) },
+                trailingIcon = {
+                    if (gradeSearchQuery.isNotEmpty()) {
+                        IconButton(onClick = { gradeSearchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "مسح البحث", tint = TextMuted, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = SchoolGreen,
+                    unfocusedBorderColor = BorderLight
+                )
+            )
+        }
+
+        if (filteredStudents.isEmpty()) {
+            item {
+                Surface(
+                    color = CardSurface,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, BorderLight),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("🔍", fontSize = 24.sp)
+                        Text("لا يوجد تلاميذ يطابقون البحث في دفتر النقاط", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        if (gradeSearchQuery.isNotEmpty()) {
+                            TextButton(onClick = { gradeSearchQuery = "" }) {
+                                Text("مسح البحث", color = SchoolGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        items(filteredStudents, key = { it.id }) { student ->
             val grade = grades.find { it.studentId == student.id && it.term == selectedTerm && it.subject == selectedSubject }
             var continuous by remember(grade) { mutableStateOf(grade?.continuous?.toString() ?: "8.5") }
             var exam by remember(grade) { mutableStateOf(grade?.exam?.toString() ?: "9.0") }
@@ -527,7 +634,20 @@ private fun GradebookTab(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(student.fullName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            StudentAvatar(
+                                fullName = student.fullName,
+                                studentId = student.id,
+                                size = 32.dp
+                            )
+                            Column {
+                                Text(student.fullName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text("رقم #${student.id} · باركود: ${student.barcode}", fontSize = 10.sp, color = TextMuted)
+                            }
+                        }
                         Surface(
                             color = when (grade?.status) {
                                 GradeStatus.APPROVED -> SuccessBg

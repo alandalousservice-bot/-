@@ -17,7 +17,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.schoolplatform.data.model.*
@@ -25,7 +27,9 @@ import com.example.schoolplatform.data.network.LocalNetworkManager
 import com.example.schoolplatform.data.repository.SchoolRepository
 import com.example.schoolplatform.ui.animation.AnimatedSchoolTabRow
 import com.example.schoolplatform.ui.animation.bounceClick
+import com.example.schoolplatform.ui.components.PlatformSettingsContent
 import com.example.schoolplatform.ui.components.SchoolTopBar
+import com.example.schoolplatform.ui.components.StudentAvatar
 import com.example.schoolplatform.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,7 +37,8 @@ import com.example.schoolplatform.ui.theme.*
 fun AdminDashboardScreen(
     onNavigateLanding: () -> Unit,
     onNavigateLogin: () -> Unit,
-    onNavigateNetworkSync: () -> Unit = {}
+    onNavigateNetworkSync: () -> Unit = {},
+    onNavigateTvKiosk: () -> Unit = {}
 ) {
     val currentUser by SchoolRepository.currentUser.collectAsState()
     val students by SchoolRepository.students.collectAsState()
@@ -63,12 +68,14 @@ fun AdminDashboardScreen(
         "المرافق والمواقيت",
         "مخزون المطعم",
         "حسابات الطاقم",
+        "شاشة التلفاز الذكية",
         "سجل التدقيق",
-        "الربط الشبكي والمودام"
+        "الربط الشبكي والمودام",
+        "إعدادات المنصة والمظهر"
     )
 
     val tabIcons = listOf(
-        "📊", "👷", "💰", "📋", "🎒", "📝", "🗓️", "🏫", "🍲", "👥", "📜", "📶"
+        "📊", "👷", "💰", "📋", "🎒", "📝", "🗓️", "🏫", "🍲", "👥", "📺", "📜", "📶", "⚙️"
     )
 
     var showAddBudgetDialog by remember { mutableStateOf(false) }
@@ -81,6 +88,7 @@ fun AdminDashboardScreen(
     var showAddQuotaDialog by remember { mutableStateOf(false) }
     var showAddSupportStaffDialog by remember { mutableStateOf(false) }
     var selectedStaffForCard by remember { mutableStateOf<SupportStaff?>(null) }
+    var showAddAnnouncementDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = PaperBackground,
@@ -90,10 +98,12 @@ fun AdminDashboardScreen(
                 currentUser = currentUser,
                 onNavigateLanding = onNavigateLanding,
                 onNavigateLogin = onNavigateLogin,
-                onNavigateNetworkSync = { selectedTab = 11 }
+                onNavigateNetworkSync = { selectedTab = 12 },
+                onNavigateTvKiosk = onNavigateTvKiosk
             )
         }
-    ) { innerPadding ->
+    )
+ { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -182,12 +192,16 @@ fun AdminDashboardScreen(
                         onAddUserClick = { showAddUserDialog = true },
                         onToggleActive = { SchoolRepository.toggleUserActive(it) }
                     )
-                    10 -> AdminAuditTab(
+                    10 -> AdminTvControlTab(
+                        onLaunchTvScreen = onNavigateTvKiosk
+                    )
+                    11 -> AdminAuditTab(
                         logs = auditLogs
                     )
-                    11 -> LocalNetworkSyncScreen(
+                    12 -> LocalNetworkSyncScreen(
                         onNavigateBack = { selectedTab = 0 }
                     )
+                    13 -> AdminSettingsTab()
                 }
             }
         }
@@ -771,6 +785,23 @@ private fun AdminStudentsTab(
     onAddClassClick: () -> Unit,
     onAddStudentClick: () -> Unit
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedClassroomId by remember { mutableStateOf<Int?>(null) }
+
+    val filteredStudents = remember(students, searchQuery, selectedClassroomId) {
+        val query = searchQuery.trim()
+        students.filter { s ->
+            val matchesClass = selectedClassroomId == null || s.classroomId == selectedClassroomId
+            val matchesQuery = query.isEmpty() ||
+                s.fullName.contains(query, ignoreCase = true) ||
+                s.barcode.contains(query, ignoreCase = true) ||
+                s.id.toString() == query ||
+                s.id.toString().contains(query) ||
+                (s.parentPhone?.contains(query) == true)
+            matchesClass && matchesQuery
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -806,26 +837,205 @@ private fun AdminStudentsTab(
             }
         }
 
-        // Classrooms chips/cards
+        // Search Bar for filtering students by Name or ID / Barcode
         item {
-            Text("الأقسام المسجلة:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
-            Spacer(modifier = Modifier.height(6.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CardSurface),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, BorderLight),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("student_search_bar"),
+                        placeholder = {
+                            Text(
+                                "ابحث عن تلميذ بالاسم أو رقم التعريف أو الباركود...",
+                                fontSize = 12.sp,
+                                color = TextMuted
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "بحث",
+                                tint = SchoolGreen,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { searchQuery = "" },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "مسح البحث",
+                                        tint = TextMuted,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SchoolGreen,
+                            unfocusedBorderColor = BorderLight,
+                            focusedContainerColor = SurfaceTint.copy(alpha = 0.5f),
+                            unfocusedContainerColor = SurfaceTint.copy(alpha = 0.25f)
+                        )
+                    )
+
+                    // Active Search & Filter Badges
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Surface(
+                                color = if (searchQuery.isNotBlank() || selectedClassroomId != null) SchoolGoldLight else SurfaceTint,
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    text = if (searchQuery.isNotBlank() || selectedClassroomId != null)
+                                        "النتائج: ${filteredStudents.size} من أصل ${students.size}"
+                                    else
+                                        "إجمالي التلاميذ: ${students.size}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (searchQuery.isNotBlank() || selectedClassroomId != null) SchoolGoldDark else SchoolGreenDark,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                            if (selectedClassroomId != null) {
+                                val selectedName = classrooms.find { it.id == selectedClassroomId }?.name ?: ""
+                                Surface(
+                                    color = SchoolGreen.copy(alpha = 0.12f),
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = "القسم: $selectedName",
+                                        fontSize = 11.sp,
+                                        color = SchoolGreenDark,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (searchQuery.isNotBlank() || selectedClassroomId != null) {
+                            TextButton(
+                                onClick = {
+                                    searchQuery = ""
+                                    selectedClassroomId = null
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp), tint = DangerRed)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("إلغاء التصفية", fontSize = 11.sp, color = DangerRed, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Classrooms chips/cards (Interactive filter)
+        item {
+            Text("تصفية حسب القسم:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
+            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // All Classrooms Chip
+                val isAllSelected = selectedClassroomId == null
+                Surface(
+                    color = if (isAllSelected) SchoolGreen else CardSurface,
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, if (isAllSelected) SchoolGreen else BorderLight),
+                    modifier = Modifier
+                        .clickable { selectedClassroomId = null }
+                        .bounceClick()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("👥", fontSize = 14.sp)
+                        Text(
+                            "جميع الأقسام",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = if (isAllSelected) Color.White else TextPrimary
+                        )
+                        Surface(
+                            color = if (isAllSelected) Color.White.copy(alpha = 0.25f) else SurfaceTint,
+                            shape = CircleShape
+                        ) {
+                            Text(
+                                "${students.size}",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isAllSelected) Color.White else SchoolGreen,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+
                 classrooms.forEach { cls ->
+                    val isSelected = selectedClassroomId == cls.id
                     val count = students.count { it.classroomId == cls.id }
                     Surface(
-                        color = CardSurface,
+                        color = if (isSelected) SchoolGreen else CardSurface,
                         shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.dp, BorderLight)
+                        border = BorderStroke(1.dp, if (isSelected) SchoolGreen else BorderLight),
+                        modifier = Modifier
+                            .clickable {
+                                selectedClassroomId = if (isSelected) null else cls.id
+                            }
+                            .bounceClick()
                     ) {
-                        Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             Text("🏫", fontSize = 14.sp)
-                            Text(cls.name, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            Surface(color = SurfaceTint, shape = CircleShape) {
-                                Text("$count", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SchoolGreen, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            Text(
+                                cls.name,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = if (isSelected) Color.White else TextPrimary
+                            )
+                            Surface(
+                                color = if (isSelected) Color.White.copy(alpha = 0.25f) else SurfaceTint,
+                                shape = CircleShape
+                            ) {
+                                Text(
+                                    "$count",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) Color.White else SchoolGreen,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
                             }
                         }
                     }
@@ -834,34 +1044,122 @@ private fun AdminStudentsTab(
         }
 
         item {
-            Text("قائمة التلاميذ المسجلين (${students.size} تلميذ):", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = SchoolGreenDark)
+            Text(
+                text = if (searchQuery.isNotBlank() || selectedClassroomId != null)
+                    "نتائج البحث والتصفية (${filteredStudents.size} تلميذ):"
+                else
+                    "قائمة التلاميذ المسجلين (${students.size} تلميذ):",
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                color = SchoolGreenDark
+            )
         }
 
-        items(students, key = { it.id }) { s ->
-            val className = classrooms.find { it.id == s.classroomId }?.name ?: ""
-            Surface(
-                color = CardSurface,
-                shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, BorderLight),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+        if (filteredStudents.isEmpty()) {
+            item {
+                Surface(
+                    color = CardSurface,
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, BorderLight),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column {
-                        Text(s.fullName, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text("$className · هاتف الولي: ${s.parentPhone}", fontSize = 10.sp, color = TextSecondary)
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Surface(
+                            color = SurfaceTint,
+                            shape = CircleShape,
+                            modifier = Modifier.size(54.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text("🔍", fontSize = 26.sp)
+                            }
+                        }
+                        Text(
+                            text = "لم يتم العثور على أي تلميذ",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = if (searchQuery.isNotBlank())
+                                "لا توجد نتائج تطابق \"$searchQuery\" بالاسم أو رقم التعريف أو الباركود"
+                            else
+                                "لا يوجد تلاميذ مسجلين في هذا القسم المختار",
+                            fontSize = 12.sp,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                        Button(
+                            onClick = {
+                                searchQuery = ""
+                                selectedClassroomId = null
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = SchoolGreen),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("إعادة ضبط البحث", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
-                    Surface(color = SurfaceTint, shape = RoundedCornerShape(6.dp)) {
-                        Text(s.barcode, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SchoolGreen, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp))
+                }
+            }
+        } else {
+            items(filteredStudents, key = { it.id }) { s ->
+                val className = classrooms.find { it.id == s.classroomId }?.name ?: ""
+                Surface(
+                    color = CardSurface,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, BorderLight),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            StudentAvatar(
+                                fullName = s.fullName,
+                                studentId = s.id,
+                                size = 42.dp
+                            )
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(s.fullName, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
+                                    Surface(
+                                        color = SchoolGoldLight,
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            "رقم #${s.id}",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = SchoolGoldDark,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Text("$className · هاتف الولي: ${s.parentPhone ?: "غير مسجل"}", fontSize = 10.sp, color = TextSecondary)
+                            }
+                        }
+                        Surface(color = SurfaceTint, shape = RoundedCornerShape(6.dp)) {
+                            Text(s.barcode, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SchoolGreen, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp))
+                        }
                     }
                 }
             }
         }
     }
 }
+
 
 // 5. Grades Approval Tab
 @Composable
@@ -910,10 +1208,20 @@ private fun AdminGradesTab(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column {
-                        Text(g.studentName, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text("${g.classroomName} · ${g.subject} (${g.term})", fontSize = 10.sp, color = TextSecondary)
-                        Text("تقويم: ${g.continuous ?: "-"} · اختبار: ${g.exam ?: "-"}", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        StudentAvatar(
+                            fullName = g.studentName,
+                            studentId = g.studentId,
+                            size = 36.dp
+                        )
+                        Column {
+                            Text(g.studentName, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("${g.classroomName} · ${g.subject} (${g.term})", fontSize = 10.sp, color = TextSecondary)
+                            Text("تقويم: ${g.continuous ?: "-"} · اختبار: ${g.exam ?: "-"}", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        }
                     }
 
                     Surface(
@@ -1681,4 +1989,19 @@ private fun AddQuotaDialog(onDismiss: () -> Unit) {
             TextButton(onClick = onDismiss) { Text("إلغاء") }
         }
     )
+}
+
+@Composable
+private fun AdminSettingsTab() {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            PlatformSettingsContent()
+        }
+    }
 }

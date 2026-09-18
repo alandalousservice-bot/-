@@ -30,7 +30,8 @@ import com.example.schoolplatform.ui.theme.*
 @Composable
 fun LandingScreen(
     onNavigateLogin: () -> Unit,
-    onEnterAsRole: (Role) -> Unit
+    onEnterAsRole: (Role) -> Unit,
+    onNavigateTvKiosk: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
 
@@ -76,14 +77,64 @@ fun LandingScreen(
                         }
                     }
 
-                    Button(
-                        onClick = onNavigateLogin,
-                        modifier = Modifier.bounceClick(),
-                        colors = ButtonDefaults.buttonColors(containerColor = SchoolGreen),
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("دخول المنصة ←", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        val isDark = LocalDarkTheme.current
+
+                        // TV Smart Screen launch button
+                        IconButton(
+                            onClick = onNavigateTvKiosk,
+                            modifier = Modifier.bounceClick()
+                        ) {
+                            Surface(
+                                color = SchoolGold.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, SchoolGold),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Tv,
+                                        contentDescription = "عرض الشاشة الذكية Smart TV",
+                                        tint = SchoolGoldDark,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { ThemeManager.toggleDarkMode() },
+                            modifier = Modifier.bounceClick()
+                        ) {
+                            Surface(
+                                color = if (isDark) SchoolGreenDark else SurfaceTint,
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, BorderLight),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                        contentDescription = if (isDark) "التبديل إلى الوضع النهاري" else "التبديل إلى الوضع الليلي",
+                                        tint = if (isDark) SchoolGold else SchoolGreenDark,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Button(
+                            onClick = onNavigateLogin,
+                            modifier = Modifier.bounceClick(),
+                            colors = ButtonDefaults.buttonColors(containerColor = SchoolGreen),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text("دخول المنصة ←", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
                     }
                 }
             }
@@ -296,6 +347,75 @@ fun LandingScreen(
                         onEnterAsRole(Role.RESTAURANT_MANAGER)
                     }
                 )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // TV Presentation Smart Screen Card
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .bounceClick()
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable { onNavigateTvKiosk() },
+                    color = Color(0xFF0C3829),
+                    border = BorderStroke(1.5.dp, SchoolGold)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = SchoolGold,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text("📺", fontSize = 24.sp)
+                            }
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    "شاشة التلفاز الذكية (Smart TV Kiosk)",
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 15.sp,
+                                    color = Color.White
+                                )
+                                Surface(
+                                    color = SchoolGold.copy(alpha = 0.25f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        "وضع العرض العام",
+                                        fontSize = 10.sp,
+                                        color = SchoolGoldAccent,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "عرض دائم ومتحرك لمعلومات المؤسسة، وجبة المطعم، جداول الحصص، لوحة الشرف، وإعلانات الإدارة مناسب لشاشات البهو والاستقبال.",
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.85f),
+                                lineHeight = 18.sp
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ArrowForward,
+                            contentDescription = null,
+                            tint = SchoolGold,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))

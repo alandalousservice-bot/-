@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,7 +42,8 @@ fun SchoolTopBar(
     currentUser: User?,
     onNavigateLanding: () -> Unit,
     onNavigateLogin: () -> Unit,
-    onNavigateNetworkSync: (() -> Unit)? = null
+    onNavigateNetworkSync: (() -> Unit)? = null,
+    onNavigateTvKiosk: (() -> Unit)? = null
 ) {
     val users by SchoolRepository.users.collectAsState()
     val currentNetworkType by LocalNetworkManager.currentNetworkType.collectAsState()
@@ -105,6 +107,24 @@ fun SchoolTopBar(
                                     tint = if (isDark) SchoolGold else Color.White,
                                     modifier = Modifier.size(19.dp)
                                 )
+                            }
+                        }
+                    }
+
+                    if (onNavigateTvKiosk != null) {
+                        IconButton(
+                            onClick = onNavigateTvKiosk,
+                            modifier = Modifier.bounceClick(),
+                            colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)
+                        ) {
+                            Surface(
+                                color = SchoolGold.copy(alpha = 0.25f),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Tv, contentDescription = "عرض الشاشة الذكية Smart TV", tint = SchoolGold, modifier = Modifier.size(19.dp))
+                                }
                             }
                         }
                     }
@@ -221,6 +241,24 @@ fun SchoolTopBar(
                                     )
                                 }
                                 HorizontalDivider()
+                                if (onNavigateTvKiosk != null) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text("شاشة العرض التلفزيوني Smart TV", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                Text("عرض معلومات المؤسسة على شاشات التلفاز", fontSize = 10.sp, color = SchoolGoldDark)
+                                            }
+                                        },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Tv, contentDescription = null, tint = SchoolGoldDark)
+                                        },
+                                        onClick = {
+                                            showUserMenu = false
+                                            onNavigateTvKiosk()
+                                        }
+                                    )
+                                    HorizontalDivider()
+                                }
                                 if (onNavigateNetworkSync != null) {
                                     DropdownMenuItem(
                                         text = {

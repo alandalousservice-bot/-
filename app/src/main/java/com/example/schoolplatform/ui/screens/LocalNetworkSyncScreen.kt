@@ -82,6 +82,14 @@ fun LocalNetworkSyncScreen(
                     }
                 },
                 actions = {
+                    val isDark = LocalDarkTheme.current
+                    IconButton(onClick = { ThemeManager.toggleDarkMode() }) {
+                        Icon(
+                            imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = if (isDark) "التبديل إلى الوضع النهاري" else "التبديل إلى الوضع الليلي",
+                            tint = if (isDark) SchoolGold else SchoolGreenDark
+                        )
+                    }
                     IconButton(onClick = {
                         LocalNetworkManager.refreshNetworkInfo()
                         snackbarMessage = "تم تحديث معلومات محول الشبكة"

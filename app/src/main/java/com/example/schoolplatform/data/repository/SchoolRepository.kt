@@ -252,6 +252,48 @@ object SchoolRepository {
     private val _supportStaff = MutableStateFlow(initialSupportStaff)
     val supportStaff: StateFlow<List<SupportStaff>> = _supportStaff.asStateFlow()
 
+    // School Announcements for smart screen / TV & Community
+    private val initialAnnouncements = listOf(
+        SchoolAnnouncement(
+            id = 1,
+            title = "انطلاق دروس الدعم والتقوية للفصل الحالي",
+            content = "تعلن إدارة المؤسسة عن افتتاح حصص التقوية والمراجعة الموجهة لتلاميذ السنة الخامسة ابتدائي كل ثلاثاء مساءً وخميس.",
+            targetAudience = "الأولياء والتلاميذ",
+            priority = "HIGH",
+            date = todayStr
+        ),
+        SchoolAnnouncement(
+            id = 2,
+            title = "برنامج المطعم المدرسي: وجبات ساخنة وصحية",
+            content = "يقدم المطعم المدرسي وجبات يومية متكاملة تحت إشراف صحي وفحص دوري لمصادر التموين وحفظ المواد الغذائية.",
+            targetAudience = "الجميع",
+            priority = "NORMAL",
+            date = todayStr
+        ),
+        SchoolAnnouncement(
+            id = 3,
+            title = "مسابقة حفظ القرآن الكريم والحديث النبوي الشريف",
+            content = "تنظم المؤسسة بالتعاون مع النادي الثقافي مسابقة ولائية تشجيعية، يُرجى من التلاميذ الراغبين تسجيل أسمائهم لدى أستاذ القسم.",
+            targetAudience = "التلاميذ",
+            priority = "NORMAL",
+            date = todayStr
+        ),
+        SchoolAnnouncement(
+            id = 4,
+            title = "احترام مواعيد فتح وغلق الأبواب وتأمين الساحة",
+            content = "تُفتح أبواب المدرسة ابتداءً من 07:45 صباحاً وتُغلق فور انطلاق النشيد الوطني في 08:00 صباحاً حفاظاً على الانضباط وسلامة أبنائنا.",
+            targetAudience = "الأولياء",
+            priority = "URGENT",
+            date = todayStr
+        )
+    )
+
+    private val _announcements = MutableStateFlow(initialAnnouncements)
+    val announcements: StateFlow<List<SchoolAnnouncement>> = _announcements.asStateFlow()
+
+    private val _tvConfig = MutableStateFlow(TvDisplayConfig())
+    val tvConfig: StateFlow<TvDisplayConfig> = _tvConfig.asStateFlow()
+
     private val _auditLogs = MutableStateFlow(initialAuditLogs)
     val auditLogs: StateFlow<List<AuditLog>> = _auditLogs.asStateFlow()
 
@@ -624,5 +666,52 @@ object SchoolRepository {
             createdAt = "$todayStr ${timeFormat.format(Date())}"
         )
         _auditLogs.value = listOf(log) + _auditLogs.value
+    }
+
+    // Smart TV Display & Announcements management
+    fun updateTvConfig(
+        autoScrollSeconds: Int? = null,
+        isPlaying: Boolean? = null,
+        tickerText: String? = null,
+        showClock: Boolean? = null
+    ) {
+        val current = _tvConfig.value
+        _tvConfig.value = current.copy(
+            autoScrollSeconds = autoScrollSeconds ?: current.autoScrollSeconds,
+            isPlaying = isPlaying ?: current.isPlaying,
+            tickerText = tickerText ?: current.tickerText,
+            showClock = showClock ?: current.showClock
+        )
+    }
+
+    fun addAnnouncement(
+        title: String,
+        content: String,
+        targetAudience: String,
+        priority: String = "NORMAL"
+    ) {
+        val newId = (_announcements.value.maxOfOrNull { it.id } ?: 0) + 1
+        val item = SchoolAnnouncement(
+            id = newId,
+            title = title,
+            content = content,
+            targetAudience = targetAudience,
+            priority = priority,
+            date = todayStr,
+            active = true
+        )
+        _announcements.value = listOf(item) + _announcements.value
+        addAuditLog("ADD_ANNOUNCEMENT", "إضافة إعلان شاشة التلفاز", newId, "إعلان: $title الموجه لـ $targetAudience")
+    }
+
+    fun toggleAnnouncementActive(id: Int) {
+        _announcements.value = _announcements.value.map {
+            if (it.id == id) it.copy(active = !it.active) else it
+        }
+    }
+
+    fun deleteAnnouncement(id: Int) {
+        _announcements.value = _announcements.value.filterNot { it.id == id }
+        addAuditLog("DELETE_ANNOUNCEMENT", "حذف إعلان", id, "حذف إعلان الشاشة رقم $id")
     }
 }
